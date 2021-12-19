@@ -12,18 +12,20 @@ made by itsOik
 -   its only by luck that it works!
 -   Replace tags in HTML by using EXACTLY this syntax:
     -   for CSS: <br>
-        `{% style <nameOfFile>.css %}`
+        (requires opening and closing `<style>` tags)<br>
+        `<style>{% style <nameOfFile>.css %}</style>`
     -   for scripts(js): <br>
-        `{% script <nameOfFile>.js %}`
+        (requires opening and closing `<script>` tags)<br>
+        `<script>{% script <nameOfFile>.js %}</script>`
     -   for including another HTML: <br>
         `{% INCLUDES <nameOfFile>.html %}`
     -   for extending another HTML <br>(supports BLOCK (must have matching block in file it extends)) <br>
-        `{% EXTENDS <nameOfFile>.html %}`
+        `{% EXTENDS <nameOfFile>.html %}`<br>
         `{% BLOCK <nameOfBlock> %} {% ENDBLOCK <nameOfBlock> %}`
 
 ---
 
-## TODO:
+### TODO:
 
 -   [ ] for loop templating
     ```<ul>
@@ -35,5 +37,15 @@ made by itsOik
     endRegex = \{% \w+FOR %\}
     blockRegex = \{% FOR \w+ of w+ %\}\w+\{% \w+FOR %\}
     ```
+
+---
+
+### DONE:
+
+-   [x] EXTENDS tag
+-   [x] BLOCK tag
+-   [x] INCLUDES tag
+-   [x] style tag
+-   [x] script tag
 
 ---

@@ -37,7 +37,35 @@ async function render(fileNameToLoad) {
             "[templateEngine:38]: ERROR: something wrong happened loading base template"
         );
     }
+    fullyRenderedView.view = await replaceTemplateTags(fullyRenderedView.view);
     return fullyRenderedView.view;
+}
+
+async function replaceTemplateTags(fileString) {
+    var tags = parseTemplate(fileString).tags;
+    const replacedFile = { string: fileString };
+    const ignoreList = ["EXTENDS", "INCLUDES"];
+    for (const tag of tags) {
+        console.log("[templateEngine:58]: fileTags", tag);
+        const tagType = tag[0],
+            tagFileName = tag[1];
+        if (!ignoreList.includes(tagType)) {
+            console.log("[templateEngine:52]: loading file: ", tagFileName);
+            const loadedFileString = await readRequestedFile(
+                tagType,
+                tagFileName
+            );
+            const replace_REGEX = `{% ${tagType} ${tagFileName} %}`;
+            replacedFile["string"] = replacedFile.string.replace(
+                replace_REGEX,
+                loadedFileString
+            );
+            console.log(
+                `[templateEngine:54]: replacing tag: ${tagType} with: "${loadedFileString}"`
+            );
+        }
+    }
+    return replacedFile.string;
 }
 async function handleExtendsAndIncludes(fileString) {
     var extendString = fileString;
@@ -53,6 +81,7 @@ async function handleExtendsAndIncludes(fileString) {
     }
     return extendString;
 }
+
 async function includeTemplate(extendString, fileStringObj) {
     const includesTags = parseTemplate(extendString);
     var tags = includesTags.tags.concat(fileStringObj.fileTags.tags);
@@ -106,18 +135,6 @@ async function extendTemplate(fileStringObj) {
     }
     return extendedTemplateString;
 }
-
-// function replaceBlockTags(blockFileString, blockReplaceObj) {
-//     // blockReplaceObj = { blockName, blockContent };
-//     var replacedBlocksString = blockFileString;
-//     const replace_REGEX = `{% BLOCK ${blockReplaceObj.blockName} %} {% ENDBLOCK ${blockReplaceObj.blockName} %}`;
-//     replacedBlocksString = replacedBlocksString.replace(
-//         replace_REGEX,
-//         blockReplaceObj.blockContent
-//     );
-//     return replacedBlocksString;
-// }
-
 function replaceBlockTags(blockFileString, fileStringObj) {
     // we get a string containing BLOCKs
     // we parse the string to get the BLOCKs
@@ -142,19 +159,6 @@ function replaceBlockTags(blockFileString, fileStringObj) {
     }
     return replacedBlocksString;
 }
-
-// function replaceTemplateTags() {
-//     const ignoreList = ["EXTENDS", "INCLUDES"];
-//     for (const tag of tags) {
-//         if (!ignoreList.includes(tag[0])) {
-//             console.log("[templateEngine:85]: tag", tag);
-//             // load file
-//             // replace tag with file content
-//             // need template to include
-//             // string to replace tags in
-//         }
-//     }
-// }
 function parseTemplate(string) {
     //! ---- BLOCS ---- //
     const blockResult = string.match(REGEX.BLOCK.all);
