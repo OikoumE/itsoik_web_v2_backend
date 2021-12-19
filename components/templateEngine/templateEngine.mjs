@@ -1,4 +1,4 @@
-// File: templateEngine.js - My very own template engine
+// File: templateEngine.js - VanillaChocolateJS
 // Author: itsOiK
 // Date: 17/12-21
 ("use strict");
@@ -19,7 +19,11 @@ const REGEX = {
     TEMPLATE_INCLUDE: /\{% INCLUDE \w+ %\}/gs,
     TEMPLATE_EXTEND: /\{% EXTEND \w+ %\}/gs,
 };
-
+/**
+ * Accepts a filename to load, parses template tags and replaces them with the templates returning a full view
+ * @param {String} fileNameToLoad name of html-file to load including extension
+ * @returns {String}              Fully rendered view
+ */
 async function render(fileNameToLoad) {
     // entrypoint from app.mjs
     // recieve file name with ext of file to return
@@ -34,23 +38,25 @@ async function render(fileNameToLoad) {
     } else {
         //! something wrong happened loading base template
         console.log(
-            "[templateEngine:38]: ERROR: something wrong happened loading base template"
+            `[templateEngine:38]: ERROR: Failed to load template: "${fileNameToLoad}"`
         );
     }
     fullyRenderedView.view = await replaceTemplateTags(fullyRenderedView.view);
     return fullyRenderedView.view;
 }
-
+/**
+ * Accepts a string, parses tags, loads required file, replaces tags with content from file
+ * @param {String} fileString String to replace template tags in
+ * @returns {String}          String with tags replaced
+ */
 async function replaceTemplateTags(fileString) {
     var tags = parseTemplate(fileString).tags;
     const replacedFile = { string: fileString };
     const ignoreList = ["EXTENDS", "INCLUDES"];
     for (const tag of tags) {
-        console.log("[templateEngine:58]: fileTags", tag);
         const tagType = tag[0],
             tagFileName = tag[1];
         if (!ignoreList.includes(tagType)) {
-            console.log("[templateEngine:52]: loading file: ", tagFileName);
             const loadedFileString = await readRequestedFile(
                 tagType,
                 tagFileName
@@ -60,13 +66,15 @@ async function replaceTemplateTags(fileString) {
                 replace_REGEX,
                 loadedFileString
             );
-            console.log(
-                `[templateEngine:54]: replacing tag: ${tagType} with: "${loadedFileString}"`
-            );
         }
     }
     return replacedFile.string;
 }
+/**
+ * Accepts a string, parses tags, if tags are found, passes the string and tags to "extendTemplate()" and "includeTemplate()" for processing
+ * @param {String} fileString String to replace template tags in
+ * @returns {String}          String with tags replaced
+ */
 async function handleExtendsAndIncludes(fileString) {
     var extendString = fileString;
     var fileTags = parseTemplate(extendString);
@@ -76,21 +84,23 @@ async function handleExtendsAndIncludes(fileString) {
             fileString,
             fileTags,
         };
-        extendString = await extendTemplate(fileStringObj);
-        extendString = await includeTemplate(extendString, fileStringObj);
+        extendString = await extendTemplate(extendString);
+        extendString = await includeTemplate(extendString);
     }
     return extendString;
 }
-
-async function includeTemplate(extendString, fileStringObj) {
-    const includesTags = parseTemplate(extendString);
-    var tags = includesTags.tags.concat(fileStringObj.fileTags.tags);
-    const includedFileString = { string: extendString };
-    for (const tag of tags) {
+/**
+ * parses includeString to find INCLUDES tag, loads required file, replaces INCLUDES tags with content from the requested file
+ * @param {String} includeString String to replace INCLUDES tags in
+ * @returns {String} string that INCLUDES the content of the requested file
+ */
+async function includeTemplate(includeString) {
+    const includesTags = parseTemplate(includeString);
+    const includedFileString = { string: includeString };
+    for (const tag of includesTags.tags) {
         const tagType = tag[0],
             fileName = tag[1];
         if (tagType === "INCLUDES") {
-            // load requestes file
             var _includesFileString = await readRequestedFile("html", fileName);
             const includeTags = parseTemplate(_includesFileString);
             if (includeTags?.tags) {
@@ -109,43 +119,56 @@ async function includeTemplate(extendString, fileStringObj) {
     }
     return includedFileString.string;
 }
-async function extendTemplate(fileStringObj) {
-    // we are getting a fileStringObj that contains EXTENDS
+/**
+ * parses extendString to find EXTENDS tag, loads required file, replaces EXTENDS tags with content from the requested file
+ * @param {String} extendString String to replace EXTENDS tags in
+ * @returns {String} String that EXTENDS the content of the requested file
+ */
+async function extendTemplate(extendString) {
+    // we are getting a extendString that contains EXTENDS
     // we iterate over the tags to find the EXTENDS tag and what file to load'
     // we check the loaded file if it has blocks
     // we replace the blocks in the loaded file with content from fileStringObj
-    let extendedTemplateString = fileStringObj.fileString;
-    for (const tagChunk of fileStringObj.fileTags.tags) {
-        const type = tagChunk[0],
-            fileName = tagChunk[1];
-        if (type === "EXTENDS") {
-            const extendStringObj = {
-                nextFileString: "",
-                nextFileTags: "",
-            };
-            extendStringObj["nextFileString"] = await readRequestedFile(
-                "html",
-                fileName
-            );
-            extendedTemplateString = replaceBlockTags(
-                extendStringObj.nextFileString,
-                fileStringObj
-            );
+    var extendTags = parseTemplate(extendString);
+    let extendedTemplateString = extendString;
+    if (!(extendTags?.tags.length === 0)) {
+        for (const tagChunk of extendTags.tags) {
+            const type = tagChunk[0],
+                fileName = tagChunk[1];
+            if (type === "EXTENDS") {
+                const extendFileString = await readRequestedFile(
+                    "html",
+                    fileName
+                );
+                if (!(Object.keys(extendTags?.blocks).length === 0)) {
+                    extendedTemplateString = replaceBlockTags(
+                        extendFileString,
+                        extendTags.blocks
+                    );
+                } else
+                    console.log(
+                        `[templateEngine:150]: ERROR: No "BLOCK" tags in the file that is calling "EXTENDS" on file: ${fileName}`
+                    );
+            }
         }
-    }
+    } else
+        console.log(
+            `[templateEngine:160]: ERROR: No template tags in the file that is calling "EXTENDS" on file: ${fileName}`
+        );
     return extendedTemplateString;
 }
-function replaceBlockTags(blockFileString, fileStringObj) {
-    // we get a string containing BLOCKs
-    // we parse the string to get the BLOCKs
-    // we replace the BLOCK tags in the blockFileString
-    // with the content from fileStringObj.fileTags.blocks
+/**
+ * Accepts "blockFileString" to parse and "blockTags" with name of blocks and the content to replace them with
+ * @param {String} blockFileString String to replace BLOCK tags in
+ * @param {Object} blockTags [Key, Value] pairs where Key = name of BLOCK tag, Value = Content to replace BLOCK tag with
+ * @returns {String} string that includes the content of the requested file
+ */
+function replaceBlockTags(blockFileString, blockTags) {
     const blocks = parseTemplate(blockFileString).blocks;
     var replacedBlocksString = blockFileString;
-    if (blocks) {
+    if (!(Object.keys(blocks).length === 0)) {
         for (const [replaceBlock, value] of Object.entries(blocks)) {
-            const replaceString =
-                fileStringObj.fileTags.blocks[replaceBlock] || "";
+            const replaceString = blockTags[replaceBlock] || "";
             const replace_REGEX = `{% BLOCK ${replaceBlock} %} {% ENDBLOCK ${replaceBlock} %}`;
             replacedBlocksString = replacedBlocksString.replaceAll(
                 replace_REGEX,
@@ -153,15 +176,23 @@ function replaceBlockTags(blockFileString, fileStringObj) {
             );
             if (!replaceString)
                 console.log(
-                    `[templateEngine:139]: ERROR: did not find matching block for "${replaceBlock}"`
+                    `[templateEngine:180]: ERROR: did not find matching BLOCK-tag for "${replaceBlock}"`
                 );
         }
     }
     return replacedBlocksString;
 }
-function parseTemplate(string) {
-    //! ---- BLOCS ---- //
-    const blockResult = string.match(REGEX.BLOCK.all);
+/**
+ * Accepts a string to parse for template tags
+ *
+ * if no result returns: { tags = [], blocks = {} }
+ * @param {String} templateString Template to parse for tags and blocks
+ * @returns {Object} result from parsing the string
+ *
+ */
+function parseTemplate(templateString) {
+    //! ---- BLOCKS ---- //
+    const blockResult = templateString.match(REGEX.BLOCK.all);
     const blocks = {};
     if (blockResult) {
         for (const block of blockResult) {
@@ -184,7 +215,12 @@ function parseTemplate(string) {
     const result = { tags, blocks };
     return result;
 }
-
+/**
+ * Accepts "filetype" (folder/tag relationship) and "fileName" of file to load
+ * @param {String} fileType Type of file to load (style/template/script)
+ * @param {String} fileName Name of the file to load
+ * @returns {String} Content of loaded file
+ */
 async function readRequestedFile(fileType, fileName) {
     try {
         let file_string = await readFile(
@@ -195,60 +231,11 @@ async function readRequestedFile(fileType, fileName) {
         );
         return file_string;
     } catch (err) {
-        console.log("[templateEngine:54]: ERROR: file not found: ", fileName);
+        console.log(
+            `[templateEngine:54]: ERROR: file not found: "${fileName}"`
+        );
         return null;
     }
 }
 
 export { render };
-
-//! --------------------------------------------------------- //
-//*                    -- BLÆH --                     //
-//! ------------------------------------------------------- //
-
-// const parentTemplatesArray = [];
-// async function renderTemplate(fileString) {
-//     const templateNameArray = parseTemplate(
-//             fileString,
-//             REGEX.TEMPLATE_TAG_REPLACE
-//         ),
-//         templateFileStrings = {};
-//     if (!(templateNameArray === "")) {
-//         for (const templateChunk of templateNameArray) {
-//             const templateType = templateChunk[0],
-//                 templateName = templateChunk[1];
-//             // if (templateType === "extends") {
-//             //     const extendTemplate = await readRequestedFile(
-//             //         "html",
-//             //         templateName
-//             //     );
-//             //     parentTemplatesArray.push(extendTemplate);
-//             //     // renderTemplate(extendTemplate); //TODO do something
-//             // } else {
-//             templateFileStrings[templateName] = await readRequestedFile(
-//                 templateType,
-//                 templateName
-//             );
-//             // }
-//             const occurrences = templateNameArray.filter(
-//                 (chunk) => chunk === templateChunk
-//             ).length;
-//             console.log(
-//                 `[templateEngine:27]: replaced ${templateType}${
-//                     occurrences > 1 ? "'s" : ""
-//                 }: ${templateName}, ${occurrences}x times`
-//             );
-//             const _key = `{% ${templateType} ${templateName} %}`;
-//             const response = fileString
-//                 .toString()
-//                 .replaceAll(_key, templateFileStrings[templateName]);
-//             // if (parentTemplatesArray.length > 0) {
-//             //     for (const parentTemplate of parentTemplatesArray) {
-//             //         response += renderTemplate(parentTemplate);
-//             //     }
-//             // } else {}
-//             return response;
-//         }
-//     }
-//     return fileString;
-// }

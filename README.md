@@ -49,3 +49,15 @@ made by itsOik
 -   [x] script tag
 
 ---
+
+## Requirments:
+
+-   NodeJS: v16+
+
+---
+
+## Install instructions:
+
+-   Coming soon™
+
+---
