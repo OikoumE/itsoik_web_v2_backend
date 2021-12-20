@@ -26,49 +26,46 @@ const httpPort = 3001;
 const ip = "192.168.50.48";
 const RETURN404 = `<style> html { background-color: #000000;} </style><img src='https://http.cat/404.jpg' />`;
 
+// function parseQuery(request) {
+//     const query = request.query,
+//         path = request.originalUrl;
+//     console.log("[app:31]: query", query);
+//     const parsedQuery = {};
+//     for (const [key, value] of Object.entries(query)) {
+//         try {
+//             parsedQuery[key] = value;
+//         } catch (err) {
+//             // console.log("[app:37]: err", err);
+//             console.log(`[app:35]: ERROR: ${err.name} - at: ${path}`);
+//             if (err.name === "SyntaxError") {
+//                 console.log(
+//                     "[app:40]: ERROR: No arguments in GET-REQUEST at: ",
+//                     path
+//                 );
+//             }
+//         }
+//     }
+//     console.log("[app:47]: parsedQuery", parsedQuery);
+//     return parsedQuery;
+// }
+
 //! ------------------------------------ AUTOSHOUTOUT ------------------------------------ //
 // //* ------- INDEX --------//
 app.get("/", async (req, res) => {
+    // TEST URL: http://192.168.50.48:3001/?user=lalala&users=user1&users=user2&users=user3
+    const html = await templateEngine.render("test.html", req.query);
+    if (html) {
+        res.set("Content-Type", "text/html").status(200).end(html);
+    } else res.status(404).end(RETURN404);
+});
+
+app.get("/hello/", async (req, res) => {
     const html = await templateEngine.render("test.html");
     if (html) {
         res.set("Content-Type", "text/html").status(200).end(html);
     } else res.status(404).end(RETURN404);
 });
-app.get("/base.css", (req, res) => {
-    res.sendFile(
-        path.resolve(path.join("..", "frontend", "static", "style", "base.css"))
-    );
-});
-app.get("/nav.js", (req, res) => {
-    res.sendFile(
-        path.resolve(path.join("..", "frontend", "static", "script", "nav.js"))
-    );
-});
-app.get("/templateEngine.js", (req, res) => {
-    res.sendFile(
-        path.resolve(
-            path.join("..", "frontend", "static", "script", "templateEngine.js")
-        )
-    );
-});
-app.get("/template/", (req, res) => {
-    console.log(req.query);
-    res.sendFile(
-        path.resolve(
-            path.join(
-                "..",
-                "frontend",
-                "templates",
-                `${req.query.template_name}.html`
-            )
-        )
-    );
-});
 
-//* ------- SCRIPTS --------//
-// app.get("/auto_shoutout/script.js", (req, res) => {
-//     res.sendFile(__dirname + "/static/scripts/AutoShoutout.js");
-// });
 // //* ------- COMMANDS --------//
 // app.post("/auto_shoutout/so", (params, res) => {
 //     console.log(params.query);
