@@ -20,50 +20,39 @@ const app = express();
 app.use(cors());
 const httpServer = http.Server(app);
 
-import * as templateEngine from "./components/templateEngine/templateEngine.mjs";
+import { TemplateEngine } from "./components/templateEngine/templateEngine.mjs";
+// import * as templateEngine from "./components/templateEngine/templateEngine.mjs";
 
 const httpPort = 3001;
 const ip = "192.168.50.48";
-const RETURN404 = `<style> html { background-color: #000000;} </style><img src='https://http.cat/404.jpg' />`;
-
-// function parseQuery(request) {
-//     const query = request.query,
-//         path = request.originalUrl;
-//     console.log("[app:31]: query", query);
-//     const parsedQuery = {};
-//     for (const [key, value] of Object.entries(query)) {
-//         try {
-//             parsedQuery[key] = value;
-//         } catch (err) {
-//             // console.log("[app:37]: err", err);
-//             console.log(`[app:35]: ERROR: ${err.name} - at: ${path}`);
-//             if (err.name === "SyntaxError") {
-//                 console.log(
-//                     "[app:40]: ERROR: No arguments in GET-REQUEST at: ",
-//                     path
-//                 );
-//             }
-//         }
-//     }
-//     console.log("[app:47]: parsedQuery", parsedQuery);
-//     return parsedQuery;
-// }
-
+const RETURN_CODE = (code) => {
+    return `<style> html { background-color: #000000;} </style><img src='https://http.cat/${code}.jpg' />`;
+};
+const templateEngine = new TemplateEngine();
 //! ------------------------------------ AUTOSHOUTOUT ------------------------------------ //
 // //* ------- INDEX --------//
 app.get("/", async (req, res) => {
-    // TEST URL: http://192.168.50.48:3001/?user=lalala&users=user1&users=user2&users=user3
-    const html = await templateEngine.render("test.html", req.query);
+    // TEST URL: http://192.168.50.48:3001/?user=<p>lalalla<p>
+    const data = {
+        users: new Array(10).fill(123),
+        user: "vivax",
+    };
+    const html = await templateEngine.render("home.html", data);
     if (html) {
         res.set("Content-Type", "text/html").status(200).end(html);
-    } else res.status(404).end(RETURN404);
+    } else res.status(404).end(RETURN_CODE(404));
 });
 
 app.get("/hello/", async (req, res) => {
-    const html = await templateEngine.render("test.html");
+    const data = {
+        users: new Array(10).fill("hello"),
+        user: "world",
+    };
+
+    const html = await templateEngine.render("test.html", data);
     if (html) {
         res.set("Content-Type", "text/html").status(200).end(html);
-    } else res.status(404).end(RETURN404);
+    } else res.status(404).end(RETURN_CODE(404));
 });
 
 // //* ------- COMMANDS --------//

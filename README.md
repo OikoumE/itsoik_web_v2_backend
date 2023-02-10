@@ -37,12 +37,12 @@ made by itsOik
 
         in template HTML:
 
-        ```
-        {% FOR dataVar of data %}
-        // do something with dataVar
-        {% ENDFOR %}
+        
+            {% FOR dataVar of data %} <br>
+            // do something with `{{ dataVar }}` <br>
+            {% ENDFOR %}
 
-        ```
+        
 
     -   `{{ tag }}` (single-tag) replacement: <br>
         Replaces tag with data from a "key,value" object with same "key" as the `{{ tag }}`
